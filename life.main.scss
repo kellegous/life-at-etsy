@@ -1,0 +1,15 @@
+body {
+}
+
+#view {
+  position: relative;
+  margin: 100px auto;
+}
+
+.cell {
+  position: absolute;
+  background-color: #f0f;
+  &.dead {
+    background-color: #eee;
+  }
+}
