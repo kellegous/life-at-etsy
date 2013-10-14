@@ -1,3 +1,5 @@
+// TODO(knorton): just compute diffs
+// TODO(knorton): use bits instead of full bytes
 export class Model {
   private grid : Int8Array;
   rows : number;
