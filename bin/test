@@ -1,0 +1,147 @@
+#!/usr/bin/env node
+var assert = require('assert'),
+    fs = require('fs'),
+    path = require('path'),
+    spawn = require('child_process').spawn,
+    sys = require('sys');
+
+var top = path.normalize(path.join(__dirname, '..')),
+    out = path.join(top, 'out');
+
+var ljust = function(s, n) {
+  s = s.substr(0, n);
+  while (s.length < n) {
+    s += ' ';
+  }
+  return s;
+};
+
+/**
+ */
+var compile = function(mods, callback) {
+  var res = [],
+      count = mods.length;
+  
+  if (!fs.existsSync(out)) {
+    fs.mkdirSync(out);
+  }
+
+  mods.forEach(function(mod, i) {
+    spawn('tsc',
+      ['--module', 'commonjs', '--outDir', out, path.join(top, mod)],
+      {stdio : 'inherit'}).on('close', function(code) {
+        if (code != 0) {
+          process.exit(code);
+        }
+        res[i] = require(path.join(out, path.basename(mod, '.ts')));
+        count--;
+        if (count == 0) {
+          callback.apply(null, res);
+        }
+      });
+  });
+};
+
+var Runner = {
+  _toTest: function(data) {
+    // flatten an array of arrays.
+    var flatten = function(array) {
+      return array.reduce(function(c, x) {
+        return c.concat(x);
+      }, []);
+    };
+
+    var lines = data.split('\n').map(function(line) {
+      line = line.trim();
+      return line.length == 0 ? null : line.split(' ').map(function(v) {
+        return parseInt(v);
+      });
+    });
+
+    var res = [];
+    res.push(lines.reduce(function(col, line) {
+      if (line == null) {
+        res.push(col);
+        return [];
+      }
+      col.push(line);
+      return col;
+    }, []));
+
+    return {
+      init: flatten(res[0]),
+      gens: res.slice(1).map(flatten),
+      rows: res[0].length,
+      cols: res[0][0].length
+    };
+  },
+
+  _report: function(model, expected) {
+    sys.puts('    expected:');
+    for (var i = 0; i < expected.length; i += model.cols) {
+      sys.puts('    ' + expected.slice(i, i + model.cols).join(' '));
+    }
+
+    sys.puts('    got:');
+    for (var i = 0, n = model.size(); i < n; i += model.cols) {
+      var row = [];
+      for (var j = 0; j < model.cols; j++) {
+        row.push(model.get(i + j));
+      }
+      sys.puts('    ' + row.join(' '));
+    }
+  },
+
+  _asExpected: function(model, result) {
+    if (model.size() != result.length) {
+      return false;
+    }
+
+    for (var i = 0, n = result.length; i < n; i++) {
+      if (model.get(i) != result[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  },
+
+  runTests: function(files, life) {
+    var passed = true;
+    files.forEach(function(file) {
+      process.stdout.write(ljust(path.basename(file) + ':', 20));
+      var test = Runner._toTest(fs.readFileSync(file).toString('ascii')),
+          model = new life.Model(test.cols, test.rows);
+  
+      test.init.forEach(function(v, i) {
+        model.set(i, v > 0);
+      });
+
+      for (var i = 0, n = test.gens.length; i < n ; i++) {
+        var expected = test.gens[i];
+        model.next();
+        if (Runner._asExpected(model, expected)) {
+          continue;
+        }
+
+        passed = false;
+        process.stdout.write('FAIL (gen: ' + (i+1) + ')\n');
+        Runner._report(model, expected, i + 1);
+        return;
+      }
+
+      process.stdout.write('ok\n');
+    });
+    return passed;
+  }
+};
+
+compile(['lib/life.ts'], function(life) {
+  var files = fs.readdirSync(path.join(top, 'tests')).map(function(file) {
+    return path.join(top, 'tests', file);
+  });
+
+  if (!Runner.runTests(files, life)) {
+    process.exit(1);
+  }
+});

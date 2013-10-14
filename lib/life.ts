@@ -1,5 +1,5 @@
 export class Model {
-  grid : Int8Array;
+  private grid : Int8Array;
   rows : number;
   cols : number;
 
@@ -9,30 +9,39 @@ export class Model {
     this.grid = new Int8Array(cols * rows);
   }
 
-  private indexOf(x : number, y : number) : number {
+  indexFor(x : number, y : number) : number {
     var cols = this.cols,
         rows = this.rows;
     return ((rows + y) % rows) * cols + ((cols + x) % cols);
   }
 
-  private get(x : number, y : number) : number {
-    return this.grid[this.indexOf(x, y)];
+  get(index : number) : boolean {
+    return this.grid[index] > 0;
   }
 
-  private set(x : number, y : number, alive : boolean) {
-    this.grid[this.indexOf(x, y)] = alive ? 1 : 0;
+  set(index : number, alive : boolean) {
+    this.grid[index] = alive ? 1 : 0;
+  }
+
+  size() : number {
+    return this.grid.length;
   }
 
   private nextFor(x : number, y : number) : number {
-    var grid = this.grid,
-        count = this.get(x - 1, y - 1) + this.get(x, y - 1) + this.get(x + 1, y - 1)
-              + this.get(x - 1, y)                          + this.get(x + 1, y)
-              + this.get(x - 1, y + 1) + this.get(x, y + 1) + this.get(x + 1, y + 1);
+    var grid = this.grid;
+    var count = grid[this.indexFor(x - 1, y - 1)]
+              + grid[this.indexFor(x,     y - 1)]
+              + grid[this.indexFor(x + 1, y - 1)]
+              + grid[this.indexFor(x - 1, y    )]
+              + grid[this.indexFor(x + 1, y    )]
+              + grid[this.indexFor(x - 1, y + 1)]
+              + grid[this.indexFor(x    , y + 1)]
+              + grid[this.indexFor(x + 1, y + 1)];
     if (count == 3) {
       return 1;
     }
     if (count == 2) {
-      return this.get(x, y);
+      return grid[this.indexFor(x, y)];
     }
     return 0;
   }
