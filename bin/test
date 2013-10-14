@@ -113,9 +113,7 @@ var Runner = {
       var test = Runner._toTest(fs.readFileSync(file).toString('ascii')),
           model = new life.Model(test.cols, test.rows);
   
-      test.init.forEach(function(v, i) {
-        model.set(i, v > 0);
-      });
+      model.init(test.init);
 
       for (var i = 0, n = test.gens.length; i < n ; i++) {
         var expected = test.gens[i];
