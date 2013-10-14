@@ -92,7 +92,11 @@ var Runner = {
     }
   },
 
-  _asExpected: function(model, result) {
+  _hasExpectedChanges: function(model, result, changes) {
+    return true;
+  },
+
+  _hasExpectedState: function(model, result) {
     if (model.size() != result.length) {
       return false;
     }
@@ -116,16 +120,16 @@ var Runner = {
       model.init(test.init);
 
       for (var i = 0, n = test.gens.length; i < n ; i++) {
-        var expected = test.gens[i];
-        model.next();
-        if (Runner._asExpected(model, expected)) {
-          continue;
-        }
+        var expected = test.gens[i],
+            changes = model.next();
 
-        passed = false;
-        process.stdout.write('FAIL (gen: ' + (i+1) + ')\n');
-        Runner._report(model, expected, i + 1);
-        return;
+        if (!Runner._hasExpectedState(model, expected)
+            || !Runner._hasExpectedChanges(model, expected, changes)) {
+          passed = false;
+          process.stdout.write('FAIL (gen: ' + (i+1) + ')\n');
+          Runner._report(model, expected, i + 1);
+          return;
+        }
       }
 
       process.stdout.write('ok\n');
