@@ -76,7 +76,7 @@ var Runner = {
     };
   },
 
-  _report: function(model, expected) {
+  _reportStateProblem: function(model, expected) {
     sys.puts('    expected:');
     for (var i = 0; i < expected.length; i += model.cols) {
       sys.puts('    ' + expected.slice(i, i + model.cols).join(' '));
@@ -92,7 +92,57 @@ var Runner = {
     }
   },
 
-  _hasExpectedChanges: function(model, result, changes) {
+  _reportChangeProblem: function(changes, expected) {
+    sys.puts('    expected:');
+    sys.puts('    ' + sys.inspect(expected));
+    sys.puts('    got:');
+    sys.puts('    ' + sys.inspect(changes));
+  },
+
+  _expectedChanges: function(next, prev) {
+    var born = [],
+        died = [];
+
+    for (var i = 0, n = next.length; i < n; i++) {
+      if (next[i] == prev[i]) {
+        continue;
+      }
+      if (next[i] == 1) {
+        born.push(i);
+      } else {
+        died.push(i);
+      }
+    }
+
+    return { born: born, died: died };
+  },
+
+  _hasExpectedChanges: function(changes, expected) {
+    var rb = changes.born,
+        rd = changes.died,
+        eb = expected.born,
+        ed = expected.died;
+    if (rb.length != eb.length || rd.length != ed.length) {
+      return false;
+    }
+
+    rb.sort(function(a, b) {
+      return a - b;
+    });
+    rd.sort(function(a, b) {
+      return a - b;
+    });
+
+    for (var i = 0, n = rb.length; i < n; i++) {
+      if (rb[i] != eb[i]) {
+        return false;
+      }
+    }
+    for (var i = 0, n = rd.length; i < n; i++) {
+      if (rd[i] != ed[i]) {
+        return false;
+      }
+    }
     return true;
   },
 
@@ -115,21 +165,31 @@ var Runner = {
     files.forEach(function(file) {
       process.stdout.write(ljust(path.basename(file) + ':', 20));
       var test = Runner._toTest(fs.readFileSync(file).toString('ascii')),
-          model = new life.Model(test.cols, test.rows);
+          model = new life.Model(test.cols, test.rows),
+          prev = test.init;
   
       model.init(test.init);
 
       for (var i = 0, n = test.gens.length; i < n ; i++) {
-        var expected = test.gens[i],
+        var expected_state = test.gens[i],
+            expected_changes = Runner._expectedChanges(expected_state, prev),
             changes = model.next();
 
-        if (!Runner._hasExpectedState(model, expected)
-            || !Runner._hasExpectedChanges(model, expected, changes)) {
+        if (!Runner._hasExpectedChanges(changes, expected_changes)) {
           passed = false;
           process.stdout.write('FAIL (gen: ' + (i+1) + ')\n');
-          Runner._report(model, expected, i + 1);
+          Runner._reportChangeProblem(changes, expected_changes);
           return;
         }
+
+        if (!Runner._hasExpectedState(model, expected_state)) {
+          passed = false;
+          process.stdout.write('FAIL (gen: ' + (i+1) + ')\n');
+          Runner._reportStateProblem(model, expected, i + 1);
+          return;
+        }
+
+        prev = expected_state;
       }
 
       process.stdout.write('ok\n');
