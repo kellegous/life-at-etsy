@@ -1,3 +1,6 @@
+/// <reference path="signal.ts" />
+module life {
+
 export interface Changes {
   born : number[];
   died : number[];
@@ -10,6 +13,8 @@ export class Model {
 
   rows : number;
   cols : number;
+
+  didUpdate : Signal = new Signal;
 
   constructor(cols : number, rows : number) {
     this.rows = rows;
@@ -28,7 +33,7 @@ export class Model {
     return this.grid[index] > 0;
   }
 
-  init(vals : any[]) {
+  init(vals : any[]) : Model {
     var grid = this.grid,
         alive = this.alive;
     vals.forEach(function(v, i) {
@@ -38,6 +43,7 @@ export class Model {
         alive.push(i);
       }
     });
+    return this;
   }
 
   size() : number {
@@ -146,4 +152,6 @@ export class Model {
       died: died
     };
   }
+}
+
 }

@@ -3,7 +3,8 @@ var assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
     spawn = require('child_process').spawn,
-    sys = require('sys');
+    sys = require('sys'),
+    vm = require('vm');
 
 var top = path.normalize(path.join(__dirname, '..')),
     out = path.join(top, 'out');
@@ -19,24 +20,26 @@ var ljust = function(s, n) {
 /**
  */
 var compile = function(mods, callback) {
-  var res = [],
-      count = mods.length;
+  var count = mods.length;
   
   if (!fs.existsSync(out)) {
     fs.mkdirSync(out);
   }
 
   mods.forEach(function(mod, i) {
-    spawn('tsc',
-      ['--module', 'commonjs', '--outDir', out, path.join(top, mod)],
-      {stdio : 'inherit'}).on('close', function(code) {
+    var dest = path.join(out, path.basename(mod, '.ts')) + '.js';
+    spawn('tsc', ['--out', dest, path.join(top, mod)], {stdio : 'inherit'})
+      .on('close', function(code) {
         if (code != 0) {
           process.exit(code);
         }
-        res[i] = require(path.join(out, path.basename(mod, '.ts')));
+
+        var code = vm.createScript(fs.readFileSync(dest));
+        code.runInThisContext();
+
         count--;
         if (count == 0) {
-          callback.apply(null, res);
+          callback();
         }
       });
   });
@@ -160,7 +163,7 @@ var Runner = {
     return true;
   },
 
-  runTests: function(files, life) {
+  runTests: function(files) {
     var passed = true;
     files.forEach(function(file) {
       process.stdout.write(ljust(path.basename(file) + ':', 20));
@@ -198,12 +201,12 @@ var Runner = {
   }
 };
 
-compile(['lib/life.ts'], function(life) {
+compile(['lib/life.ts'], function() {
   var files = fs.readdirSync(path.join(top, 'tests')).map(function(file) {
     return path.join(top, 'tests', file);
   });
 
-  if (!Runner.runTests(files, life)) {
+  if (!Runner.runTests(files)) {
     process.exit(1);
   }
 });
