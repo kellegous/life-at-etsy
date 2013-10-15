@@ -7,20 +7,18 @@ var $e = (type : string) => {
   return $(document.createElement(type));
 };
 
-var rand = (cols : number, rows : number) => {
-  var size = cols * rows,
+var randomize = (model : Model) => {
+  var size = model.size(),
       data = Array(size),
       seed = (size * 0.2) | 0;
   for (var i = 0; i < size; i++) {
     data[i] = 0;
   }
-
   for (var i = 0; i < seed; i++) {
     var index = (Math.random() * size) | 0;
     data[index] = 1;
   }
-
-  return data;
+  return model.init(data);
 };
 
 class View {
@@ -50,85 +48,34 @@ class View {
         this.elems.push(e.get());
       }
     }
+
+    model.didChange.tap((model, changes) => {
+      this.update(changes);
+    });
+  }
+
+  private update(changes : Changes) {
+    var born = changes.born,
+        died = changes.died,
+        elems = this.elems;
+    born.forEach((index) => {
+      $(elems[index]).removeClass('dead');
+    });
+    died.forEach((index) => {
+      $(elems[index]).addClass('dead');
+    });
   }
 }
 
-var model = new Model(20, 20).init(rand(20, 20)),
+var model = new Model(100, 100),
     view = new View($('#view'), model);
 
+randomize(model);
 $(document).on('keydown', (e : KeyboardEvent) => {
   if (e.keyCode != 39) {
     return;
   }
   model.next();
-  // view.render();
 });
 
 }
-
-// module life {
-
-// var $e = function(type) {
-//   return $(document.createElement(type));
-// };
-
-// var px = function(v : number) {
-//   return v + 'px';
-// };
-
-// class View {
-//   static SIZE = 10;
-//   static PADD = 1;
-
-//   model : Model;
-//   nodes = $();
-
-//   constructor(root : JQuery, model : Model) {
-//     var rows = model.rows,
-//         cols = model.cols,
-//         nodes = this.nodes;
-//     this.model = model;
-
-//     root.css('width', rows * View.SIZE)
-//       .css('height', cols * View.SIZE);
-
-//     for (var j = 0; j < rows; j++) {
-//       for (var i = 0; i < cols; i++) {
-//         nodes.push($e('div')
-//           .addClass('cell')
-//           .css('left', i * View.SIZE)
-//           .css('top', j * View.SIZE)
-//           .css('width', View.SIZE - 2 * View.PADD)
-//           .css('height', View.SIZE - 2 * View.PADD)
-//           .appendTo(root).get(0));
-//       }
-//     }
-//   }
-
-//   render() {
-//     var nodes = this.nodes,
-//         grid = this.model.grid;
-//     for (var i = 0, n = nodes.length; i < n; i++) {
-//       if (grid[i]) {
-//         $(nodes[i]).removeClass('dead');
-//       } else {
-//         $(nodes[i]).addClass('dead');
-//       }
-//     }
-//   }
-// }
-
-// var model = new Model(100, 100),
-//     view = new View($('#view'), model);
-
-// view.render();
-
-// $(document).on('keydown', (e : KeyboardEvent) => {
-//   if (e.keyCode != 39) {
-//     return;
-//   }
-//   model.next();
-//   view.render();
-// });
-
-// }

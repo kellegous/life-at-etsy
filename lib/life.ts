@@ -14,7 +14,7 @@ export class Model {
   rows : number;
   cols : number;
 
-  didUpdate : Signal = new Signal;
+  didChange : Signal = new Signal;
 
   constructor(cols : number, rows : number) {
     this.rows = rows;
@@ -43,6 +43,8 @@ export class Model {
         alive.push(i);
       }
     });
+
+    this.didChange.raise(this, {born: alive, died: []});
     return this;
   }
 
@@ -147,10 +149,9 @@ export class Model {
     }
     this.alive = alive;
 
-    return {
-      born: born,
-      died: died
-    };
+    var changes = {born: born, died: died};
+    this.didChange.raise(this, changes);
+    return changes;
   }
 }
 
