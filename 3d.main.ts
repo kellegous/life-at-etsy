@@ -64,13 +64,13 @@ class View {
   }
 
   private initLights(scene : THREE.Scene) {
-    var ambient = new THREE.AmbientLight(0xff0000);
+    var ambient = new THREE.AmbientLight(0xff9900);
     scene.add(ambient);
 
-    var directional = new THREE.DirectionalLight(0xffffff);
-    directional.position.set(0, -1, 1).normalize();
+    var directional = new THREE.DirectionalLight(0xff9900);
+    directional.position.set(0, 1, 1).normalize();
     directional.castShadow = true;
-    directional.shadowDarkness = 0.2;
+    directional.shadowDarkness = 0.5;
     directional.shadowCameraVisible = true;
     scene.add(directional);
   }
