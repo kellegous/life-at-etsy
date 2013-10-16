@@ -67,7 +67,7 @@ class View {
   }
 }
 
-var model = new Model(100, 100),
+var model = new Model(75, 75),
     view = new View($('#view'), model);
 
 randomize(model);
