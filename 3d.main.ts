@@ -17,7 +17,7 @@ class View {
 
     // TODO: adjust camera position by aspect ratio
     var camera = new THREE.CombinedCamera(rect.width, rect.height, 40, 1, 10000, -2000, 10000);
-    camera.position.x = 100;
+    camera.position.x = 50;
     camera.position.y = 1000 * Math.sin(Math.PI / 4);
     camera.position.z = 1000 * Math.cos(Math.PI / 4);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
