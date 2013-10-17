@@ -50,6 +50,19 @@ class View {
     this.scene = scene;
     this.renderer = renderer;
 
+    renderer.domElement.addEventListener('click', (e : Event) => {
+      // convert world vector to screen pt.
+      var wh = rect.width/2,
+          hh = rect.height/2,
+          projector = new THREE.Projector();
+
+      var v = projector.projectVector(new THREE.Vector3(100, 100, 0), this.camera);
+      v.x = (v.x * wh) + wh;
+      v.y = (-v.y * hh) + hh;
+
+      console.log(v);
+    }, false);
+
     model.didChange.tap((model : Model, changes : Changes) => {
       var cubes = this.cubes;
       changes.born.forEach((i : number) => {
