@@ -201,7 +201,7 @@ var Runner = {
   }
 };
 
-compile(['lib/life.ts'], function() {
+compile(['lib/life.model.ts'], function() {
   var files = fs.readdirSync(path.join(top, 'tests')).map(function(file) {
     return path.join(top, 'tests', file);
   });

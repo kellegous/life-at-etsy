@@ -1,21 +1,49 @@
-/// <reference path="lib/life.ts" />
+/// <reference path="lib/life.msg.ts" />
+/// <reference path="lib/signal.ts" />
 /// <reference path="lib/three.d.ts" />
 /// <reference path="lib/raf.ts" />
 module life {
 
-var randomize = (model : Model) => {
-  var size = model.size(),
-      data = Array(size),
-      seed = (size * 0.2) | 0;
-  for (var i = 0; i < size; i++) {
-    data[i] = 0;
+class ModelInWorker {
+  didChange = new Signal;
+  private worker : Worker;
+  private changes : Changes[] = [];
+  constructor(public cols : number, public rows : number, fill : number) {
+    var worker = new Worker('work.js');
+    worker.onmessage = (e : MessageEvent) => {
+      var msg = <HereSomeMsg>e.data;
+      msg.changes.forEach((c) => {
+        this.changes.push(c);
+      });
+      if (msg.fromInit) {
+        this.didChange.raise(this.changes.shift());
+      }
+    };
+    worker.postMessage({
+      type: InitLife,
+      cols: cols,
+      rows: rows,
+      random: fill,
+    });
+    worker.postMessage({
+      type: NeedSome,
+      n : 20,
+    });
+    this.worker = worker;
   }
-  for (var i = 0; i < seed; i++) {
-    var index = (Math.random() * size) | 0;
-    data[index] = 1;
+
+  next() {
+    var changes = this.changes,
+        worker = this.worker;
+    this.didChange.raise(changes.shift());
+    if (changes.length <= 2) {
+      worker.postMessage({
+        type: NeedSome,
+        n: 20,
+      });
+    }
   }
-  return model.init(data);
-};
+}
 
 class View {
   private camera : THREE.CombinedCamera;
@@ -28,7 +56,7 @@ class View {
 
   private cubes : THREE.Mesh[] = [];
 
-  constructor(private root : HTMLElement, model : Model) {
+  constructor(private root : HTMLElement, model : ModelInWorker) {
     var rect = root.getBoundingClientRect(),
         scene = new THREE.Scene();
 
@@ -63,9 +91,12 @@ class View {
       console.log(v);
     }, false);
 
-    model.didChange.tap((model : Model, changes : Changes) => {
+    model.didChange.tap((changes : Changes) => {
       var cubes = this.cubes;
       changes.born.forEach((i : number) => {
+        // TODO: assign each of these the birth material.
+        // TODO: reset the birth material to 0 opacity.
+        // TODO: start a transition driver
         cubes[i].visible = true;
       });
       changes.died.forEach((i : number) => {
@@ -116,7 +147,7 @@ class View {
     scene.add(directional);
   }
 
-  private initAction(scene : THREE.Scene, model : Model, didLoad : () => void) {
+  private initAction(scene : THREE.Scene, model : ModelInWorker, didLoad : () => void) {
     var cubes = this.cubes,
         width = 3000,
         depth = 3000,
@@ -168,10 +199,9 @@ class View {
   }  
 }
 
-var model = new Model(150, 150),
+var model = new ModelInWorker(150, 150, 0.2),
     view = new View(<HTMLElement>document.querySelector('#view'), model);
 
-randomize(model);
 document.addEventListener('keydown', (e : KeyboardEvent) => {
   if (e.keyCode != 39) {
     return;

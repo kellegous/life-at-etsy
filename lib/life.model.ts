@@ -1,10 +1,6 @@
+/// <reference path="life.common.ts" />
 /// <reference path="signal.ts" />
 module life {
-
-export interface Changes {
-  born : number[];
-  died : number[];
-}
 
 export class Model {
   private grid : Int8Array;
@@ -33,7 +29,7 @@ export class Model {
     return this.grid[index] > 0;
   }
 
-  init(vals : any[]) : Model {
+  init(vals : any[]) : Changes {
     var grid = this.grid,
         alive = this.alive;
     vals.forEach(function(v, i) {
@@ -44,8 +40,9 @@ export class Model {
       }
     });
 
-    this.didChange.raise(this, {born: alive, died: []});
-    return this;
+    var changes = {born : alive, died: []};
+    this.didChange.raise(this, changes);
+    return changes;
   }
 
   size() : number {
