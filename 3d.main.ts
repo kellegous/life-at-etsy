@@ -22,25 +22,18 @@ class View {
     var rect = root.get(0).getBoundingClientRect(),
         scene = new THREE.Scene();
 
-    this.initLights(scene);
     this.initCamera(scene, rect.width, rect.height);
+    this.initLights(scene);
     this.initAction(scene, () => {
       this.render();
     });
 
-    var plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(2000, 2000, 100, 100),
-      new THREE.MeshBasicMaterial({
-        color: 0x999999,
-        wireframe: true
-      }));
-    plane.rotation.x = Math.PI / 2;
-    scene.add(plane);
-
     var renderer = new THREE.WebGLRenderer({ antialias : true });
     renderer.setSize(rect.width, rect.height);
+
     renderer.shadowMapEnabled = true;
     renderer.shadowMapSoft = true;
+
     root.get(0).appendChild(renderer.domElement);
 
     this.scene = scene;
@@ -68,14 +61,25 @@ class View {
     scene.add(ambient);
 
     var directional = new THREE.DirectionalLight(0xff9900);
-    directional.position.set(0, 1, 1).normalize();
+    directional.position.set(100, 500, 0);
+    directional.lookAt(new THREE.Vector3(0, 0, 0));
     directional.castShadow = true;
-    directional.shadowDarkness = 0.5;
+    directional.shadowDarkness = 0.3;
     directional.shadowCameraVisible = true;
     scene.add(directional);
   }
 
   private initAction(scene : THREE.Scene, didLoad : () => void) {
+    var plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(2000, 2000, 100, 100),
+      new THREE.MeshBasicMaterial({
+        color: 0xeeeeee
+      }));
+    plane.rotation.x = Math.PI / 2;
+    plane.receiveShadow = true;
+    plane.material.side = THREE.DoubleSide;
+    scene.add(plane);
+
     var geom = new THREE.CubeGeometry(20, 20, 20),
         text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad);
 
@@ -91,7 +95,7 @@ class View {
 
     var cube = new THREE.Mesh(geom, aliveMat);
     cube.position.x = 0;
-    cube.position.y = 100;
+    cube.position.y = 15;
     cube.position.z = 0;
     cube.visible = true;
     cube.castShadow = true;

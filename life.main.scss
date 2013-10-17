@@ -1,15 +1,11 @@
 body {
+  overflow: hidden;
 }
 
 #view {
-  position: relative;
-  margin: 100px auto;
-}
-
-.cell {
   position: absolute;
-  background-color: #f0f;
-  &.dead {
-    background-color: #eee;
-  }
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
