@@ -76,10 +76,6 @@ class View {
   private renderer : THREE.WebGLRenderer;
   private scene : THREE.Scene;
 
-  private birthMat : THREE.MeshLambertMaterial;
-  private deathMat : THREE.MeshLambertMaterial;
-  private aliveMat : THREE.MeshLambertMaterial;
-
   private cubes : THREE.Mesh[] = [];
 
   constructor(private root : HTMLElement, private model : ModelInWorker) {
@@ -103,19 +99,6 @@ class View {
 
     this.scene = scene;
     this.renderer = renderer;
-
-    renderer.domElement.addEventListener('click', (e : Event) => {
-      // convert world vector to screen pt.
-      var wh = rect.width/2,
-          hh = rect.height/2,
-          projector = new THREE.Projector();
-
-      var v = projector.projectVector(new THREE.Vector3(100, 100, 0), this.camera);
-      v.x = (v.x * wh) + wh;
-      v.y = (-v.y * hh) + hh;
-
-      console.log(v);
-    }, false);
 
     model.didChange.tap((changes : Changes) => {
       this.modelDidChange(changes);
@@ -211,21 +194,18 @@ class View {
     scene.add(plane);
 
     var geom = new THREE.CubeGeometry(dx, 20, dy),
-        text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad);
-
-    var aliveMat = new THREE.MeshLambertMaterial({
+        text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad),
+        matr = new THREE.MeshLambertMaterial({
         shading: THREE.FlatShading,
         map: text,
         color: 0xff9900,
         ambient: 0xff9900,
         transparent: true
       });
-    var birthMat = aliveMat.clone();
-    var deathMat = aliveMat.clone();
 
     for (var j = 0, m = model.rows; j < m; j++) {
       for (var i = 0, n = model.cols; i < n; i++) {
-        var cube = new THREE.Mesh(geom, aliveMat);
+        var cube = new THREE.Mesh(geom, matr);
         cube.position.x = -cx + i * dx;
         cube.position.y = 12;
         cube.position.z = -cy + j * dy;
@@ -235,10 +215,6 @@ class View {
         scene.add(cube);
       }
     }
-
-    this.aliveMat = aliveMat;
-    this.birthMat = birthMat;
-    this.deathMat = deathMat;
   }  
 }
 
