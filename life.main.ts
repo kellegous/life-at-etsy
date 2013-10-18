@@ -185,7 +185,6 @@ class View {
     directional.lookAt(new THREE.Vector3(0, 0, 0));
     directional.castShadow = true;
     directional.shadowDarkness = 0.4;
-    // directional.shadowCameraVisible = true;
     directional.shadowCameraBottom = -1500;
     directional.shadowCameraTop = 1500;
     directional.shadowCameraLeft = 1500;
@@ -232,12 +231,10 @@ class View {
         cube.position.z = -cy + j * dy;
         cube.visible = false;
         cube.castShadow = true;
-        // cube.receiveShadow = true;
         cubes.push(cube);
         scene.add(cube);
       }
     }
-
 
     this.aliveMat = aliveMat;
     this.birthMat = birthMat;
