@@ -211,7 +211,7 @@ class View {
     plane.material.side = THREE.DoubleSide;
     scene.add(plane);
 
-    var geom = new THREE.CubeGeometry(dx, dy, 20),
+    var geom = new THREE.CubeGeometry(dx, 20, dy),
         text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad);
 
     var aliveMat = new THREE.MeshLambertMaterial({
