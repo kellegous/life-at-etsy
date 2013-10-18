@@ -4,6 +4,32 @@
 /// <reference path="lib/raf.ts" />
 module life {
 
+var sigmoidEasing = (p : number) => {
+  return 0.5 - Math.cos(p * Math.PI) * 0.5;
+};
+
+var linearEasing = (p : number) => {
+  return p;
+};
+
+var transition = (callback: (p:number) => void, duration : number, easing? : (p:number) => number) => {
+  var t0 = Date.now();
+  if (!easing) {
+    easing = linearEasing;
+  }
+
+  var tick = () => {
+    var t1 = Date.now(),
+        p = Math.min(1.0, (t1 - t0) / duration);
+    callback(easing(p));
+    if (p < 1.0) {
+      requestAnimationFrame(tick);
+    }
+  };
+
+  requestAnimationFrame(tick);
+};
+
 class ModelInWorker {
   didChange = new Signal;
   private worker : Worker;
@@ -56,7 +82,7 @@ class View {
 
   private cubes : THREE.Mesh[] = [];
 
-  constructor(private root : HTMLElement, model : ModelInWorker) {
+  constructor(private root : HTMLElement, private model : ModelInWorker) {
     var rect = root.getBoundingClientRect(),
         scene = new THREE.Scene();
 
@@ -92,17 +118,7 @@ class View {
     }, false);
 
     model.didChange.tap((changes : Changes) => {
-      var cubes = this.cubes;
-      changes.born.forEach((i : number) => {
-        // TODO: assign each of these the birth material.
-        // TODO: reset the birth material to 0 opacity.
-        // TODO: start a transition driver
-        cubes[i].visible = true;
-      });
-      changes.died.forEach((i : number) => {
-        cubes[i].visible = false;
-      });
-      this.render();
+      this.modelDidChange(changes);
     });
   }
 
@@ -117,6 +133,52 @@ class View {
 
   render() {
     this.renderer.render(this.scene, this.camera);
+  }
+
+  private modelDidChange(changes : Changes) {
+      var cubes = this.cubes,
+          birthMat = this.birthMat,
+          deathMat = this.deathMat,
+          aliveMat = this.aliveMat;
+
+      birthMat.opacity = 0.0;
+      deathMat.opacity = 1.0;
+
+      changes.born.forEach((i : number) => {
+        var cube = cubes[i];
+        cube.visible = true;
+        cube.material = birthMat;
+        cube.castShadow = false;
+      });
+      changes.died.forEach((i : number) => {
+        var cube = cubes[i];
+        cube.material = deathMat;
+        cube.castShadow = false;
+      });
+      this.render();
+
+      transition((p : number) => {
+        birthMat.opacity = p;
+        deathMat.opacity = 1 - p;
+        if (p >= 1) {
+          changes.born.forEach((i : number) => {
+            var cube = cubes[i];
+            cube.material = aliveMat;
+            cube.castShadow = true;
+          });
+          changes.died.forEach((i : number) => {
+            var cube = cubes[i];
+            cube.material = aliveMat;
+            cube.visible = false;
+            cube.castShadow = true;
+          });
+
+          setTimeout(() => {
+            model.next();
+          }, 100);
+        }
+        this.render();
+      }, 100 /* ms */, sigmoidEasing);
   }
 
   private initCamera(scene : THREE.Scene, width : number, height : number) {
@@ -201,13 +263,6 @@ class View {
 
 var model = new ModelInWorker(150, 150, 0.2),
     view = new View(<HTMLElement>document.querySelector('#view'), model);
-
-document.addEventListener('keydown', (e : KeyboardEvent) => {
-  if (e.keyCode != 39) {
-    return;
-  }
-  model.next();
-}, false);
 
 window.addEventListener('resize', (e : Event) => {
   view.resize();
