@@ -136,49 +136,33 @@ class View {
   }
 
   private modelDidChange(changes : Changes) {
-      var cubes = this.cubes,
-          birthMat = this.birthMat,
-          deathMat = this.deathMat,
-          aliveMat = this.aliveMat;
-
-      birthMat.opacity = 0.0;
-      deathMat.opacity = 1.0;
+      var cubes = this.cubes;
 
       changes.born.forEach((i : number) => {
         var cube = cubes[i];
         cube.visible = true;
-        cube.material = birthMat;
-        cube.castShadow = false;
-      });
-      changes.died.forEach((i : number) => {
-        var cube = cubes[i];
-        cube.material = deathMat;
-        cube.castShadow = false;
+        cube.position.y = -12;
       });
       this.render();
 
       transition((p : number) => {
-        birthMat.opacity = p;
-        deathMat.opacity = 1 - p;
-        if (p >= 1) {
-          changes.born.forEach((i : number) => {
-            var cube = cubes[i];
-            cube.material = aliveMat;
-            cube.castShadow = true;
-          });
-          changes.died.forEach((i : number) => {
-            var cube = cubes[i];
-            cube.material = aliveMat;
-            cube.visible = false;
-            cube.castShadow = true;
-          });
+        changes.born.forEach((i : number) => {
+          cubes[i].position.y = p * 24 - 12;
+        });
+        changes.died.forEach((i : number) => {
+          var cube = cubes[i];
+          cube.position.y = (1 - p) * 24 - 12;
+          cube.visible = p < 1;
+        });
 
+        if (p >= 1) {
           setTimeout(() => {
             model.next();
           }, 100);
         }
+
         this.render();
-      }, 100 /* ms */, sigmoidEasing);
+      }, 200 /* ms */, sigmoidEasing);
   }
 
   private initCamera(scene : THREE.Scene, width : number, height : number) {
