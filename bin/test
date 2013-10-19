@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+
+// A test harness that looks for text files containing test sequences in tests/, compiles the
+// game of life Model and confirms that it is able to generate the sequences properly.
 var assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
@@ -9,6 +12,12 @@ var assert = require('assert'),
 var top = path.normalize(path.join(__dirname, '..')),
     out = path.join(top, 'out');
 
+/**
+ * Left justify a string.
+ * @parma s the string to be left justified
+ * @param n the length of the reslting string
+ * @return a string padded with spaces (or truncated) to a length of n.
+ */
 var ljust = function(s, n) {
   s = s.substr(0, n);
   while (s.length < n) {
@@ -18,6 +27,10 @@ var ljust = function(s, n) {
 };
 
 /**
+ * Compile the TypeScript modules in the files, evaluate them into the current context and then
+ * invoke the provided callback.
+ * @param mods a list of ts files ot compile and eval
+ * @param callback called when the files have been compiled and evaluated.
  */
 var compile = function(mods, callback) {
   var count = mods.length;
@@ -45,7 +58,11 @@ var compile = function(mods, callback) {
   });
 };
 
+/**
+ * A Runner object that encapsulates functionality for running and validating tests.
+ */
 var Runner = {
+  // Convert string data into a structured test object.
   _toTest: function(data) {
     // flatten an array of arrays.
     var flatten = function(array) {
@@ -79,6 +96,7 @@ var Runner = {
     };
   },
 
+  // Report an invalid test result where the state of the Model is unexpected.
   _reportStateProblem: function(model, expected) {
     sys.puts('    expected:');
     for (var i = 0; i < expected.length; i += model.cols) {
@@ -95,6 +113,7 @@ var Runner = {
     }
   },
 
+  // Report an invalid test result where the reported changes are incorrect.
   _reportChangeProblem: function(changes, expected) {
     sys.puts('    expected:');
     sys.puts('    ' + sys.inspect(expected));
@@ -102,6 +121,7 @@ var Runner = {
     sys.puts('    ' + sys.inspect(changes));
   },
 
+  // Determine the expected changes for two Model states.
   _expectedChanges: function(next, prev) {
     var born = [],
         died = [];
@@ -120,6 +140,7 @@ var Runner = {
     return { born: born, died: died };
   },
 
+  // Validate a set of changes against what is expected.
   _hasExpectedChanges: function(changes, expected) {
     var rb = changes.born,
         rd = changes.died,
@@ -149,6 +170,7 @@ var Runner = {
     return true;
   },
 
+  // Validate the model state against the expected results.
   _hasExpectedState: function(model, result) {
     if (model.size() != result.length) {
       return false;
@@ -163,6 +185,10 @@ var Runner = {
     return true;
   },
 
+  /**
+   * Run a list of tests.
+   * @param files the files containing test sequences to use
+   */
   runTests: function(files) {
     var passed = true;
     files.forEach(function(file) {
@@ -201,6 +227,7 @@ var Runner = {
   }
 };
 
+// Compile the model, find all the tests and invoke the test runner.
 compile(['lib/life.model.ts'], function() {
   var files = fs.readdirSync(path.join(top, 'tests')).map(function(file) {
     return path.join(top, 'tests', file);
