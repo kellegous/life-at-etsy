@@ -10,7 +10,7 @@ run:
 	tsc --out $@ --removeComments $<
 
 %.css : %.main.scss
-	sass --no-cache $< $@
+	sass --no-cache --style=compressed $< $@
 
 clean:
 	rm -rf life.js work.js life.css out
