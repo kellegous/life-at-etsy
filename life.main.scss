@@ -2,6 +2,7 @@ body {
   overflow: hidden;
 }
 
+// The element containing the canvas. It needs to consume the entire viewport.
 #view {
   position: absolute;
   top: 0;

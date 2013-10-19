@@ -1,3 +1,5 @@
+// The primary entry point for the life app.
+
 /// <reference path="lib/life.msg.ts" />
 /// <reference path="lib/signal.ts" />
 /// <reference path="lib/three.d.ts" />
