@@ -1,12 +1,49 @@
 #!/usr/bin/env python2.7
 
+import BaseHTTPServer
+import optparse
+import os
 import SimpleHTTPServer
 import SocketServer
+import sys
 
-port = 8081
-print "http://localhost:%d/" % port
-try:
-  SocketServer.TCPServer(("", port),
-    SimpleHTTPServer.SimpleHTTPRequestHandler).serve_forever()
-except KeyboardInterrupt:
-  pass
+class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+  """ A simple handler that overrides address_string to prevent it from doing fqdn lookups
+      just for printing log messages """
+  def address_string(self):
+    host, port = self.client_address[:2]
+    return host
+
+class Server(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+  """ A BaseHTTPServer configured to reduce latency when serving up local files since
+      the BaseHTTPServer often encounters cases where non-finished requests block
+      concurrent requests for multiple seconds """
+  def finish_request(self, request, client_address):
+      request.settimeout(30)
+      BaseHTTPServer.HTTPServer.finish_request(self, request, client_address)
+
+def http(addr):
+  """ Run an http server to serv files from the cwd. """
+  try:
+    s = Server(addr, Handler)
+    s.serve_forever();
+  except KeyboardInterrupt:
+    pass
+
+def main():
+  parser = optparse.OptionParser()
+  parser.add_option('--port', dest='port', default=8081, help='')
+  parser.add_option('--addr', dest='addr', default='localhost', help='')
+  opts, args = parser.parse_args()
+
+  # change diretory into the root
+  root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+  os.chdir(root)
+
+  # start the http server
+  print 'http://%s:%d/' % (opts.addr, opts.port)
+  http((opts.addr, opts.port))
+  return 0
+
+if __name__ == '__main__':
+  sys.exit(main())

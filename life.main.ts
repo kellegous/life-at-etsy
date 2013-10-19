@@ -54,6 +54,11 @@ class ModelInWorker {
   // changes that have been received from the work, but not used.
   private changes : Changes[] = [];
 
+  // in the case where the client exhausts the number of buffered changes, this 
+  // counter indicates how many change notifications to dispatch when new data
+  // arrives.
+  private pendingRequests = 0;
+
   /**
    * Create a new worker, initialize the model randomly and request a set of changes.
    * @param cols the number of columns in the game.
@@ -63,13 +68,20 @@ class ModelInWorker {
   constructor(public cols : number, public rows : number, fill : number) {
     var worker = new Worker('work.js');
     worker.onmessage = (e : MessageEvent) => {
-      var msg = <HereSomeMsg>e.data;
-      msg.changes.forEach((c) => {
-        this.changes.push(c);
-      });
-      // if the message is a response to InitLife, notify listeners immediately.
-      if (msg.fromInit) {
-        this.didChange.raise(this.changes.shift());
+      var msg = <HereSomeMsg>e.data,
+          changes = msg.changes,
+          didChange = this.didChange;
+      for (var i = 0, n = changes.length; i < n; i++) {
+        if (this.pendingRequests > 0) {
+          // first satisfy any pending requests. Note that multiple
+          // pending requests will be fulfilled synchronously, so clients
+          // are strongly discouraged from invoking next withoug having
+          // received prior generations via didLoad.
+          didChange.raise(changes[i]);
+          this.pendingRequests--;
+          continue;
+        }
+        this.changes.push(changes[i]);
       }
     };
 
@@ -91,11 +103,20 @@ class ModelInWorker {
   }
 
   /**
-   * Request changes associated with the next generation.
+   * Request changes associated with the next generation. The next generation will
+   * be dispatched via didLoad immediately if it is available. If it is not, it will
+   * dispatch as soon as a new batch of changes arrives from the worker. Note, however,
+   * that enqueing multiple pending requests is supported but not encouraged as multiple
+   * pending requests will be fulfilled synchronously when the new batch arrives.
    */
   next() {
     var changes = this.changes,
         worker = this.worker;
+    if (changes.length == 0) {
+      this.pendingRequests++;
+      return;
+    }
+
     // dispatch the next set of changes
     this.didChange.raise(changes.shift());
     // if we are running low on changes, request more
@@ -133,6 +154,7 @@ class View {
     this.initLights(scene);
     this.initAction(scene, model, () => {
       this.render();
+      this.model.next();
     });
 
     var renderer = new THREE.WebGLRenderer({ antialias : true });
