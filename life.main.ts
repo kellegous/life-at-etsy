@@ -4,20 +4,29 @@
 /// <reference path="lib/raf.ts" />
 module life {
 
+/**
+ * An "ease-in-out" easing function.
+ * @param p progress [0.0-1.0]
+ * @return transformed value of progress [0.0-1.0]
+ */
 var sigmoidEasing = (p : number) => {
   return 0.5 - Math.cos(p * Math.PI) * 0.5;
 };
 
-var linearEasing = (p : number) => {
-  return p;
-};
-
-var transition = (callback: (p:number) => void, duration : number, easing? : (p:number) => number) => {
-  var t0 = Date.now();
+/**
+ * A driver for transition style animations. This triggers callbacks at frame-rate granularity with
+ * an adjusted progress parameter.
+ * @param callback the callback function for each update.
+ * @param duration the full duration of the transition in milliseconds.
+ * @param easing an easing function to transform progress before invoking the callback.
+ */
+var transition = (callback: (p : number) => void, duration : number, easing? : (p:number) => number) => {
   if (!easing) {
-    easing = linearEasing;
+    // If no easing was provided, use linear easing
+    easing = (p : number) => { return p; }
   }
 
+  var t0 = Date.now();
   var tick = () => {
     var t1 = Date.now(),
         p = Math.min(1.0, (t1 - t0) / duration);
@@ -30,10 +39,25 @@ var transition = (callback: (p:number) => void, duration : number, easing? : (p:
   requestAnimationFrame(tick);
 };
 
+/**
+ * A remote proxy to a life.Model object running in an isolated web worker.
+ */
 class ModelInWorker {
+  // an event dispatcher for model changes
   didChange = new Signal;
+
+  // the background worker maintaining the Model
   private worker : Worker;
+
+  // changes that have been received from the work, but not used.
   private changes : Changes[] = [];
+
+  /**
+   * Create a new worker, initialize the model randomly and request a set of changes.
+   * @param cols the number of columns in the game.
+   * @param rows the number of rows in the game.
+   * @param fill the ratio of live/total to use when randomly populating the board.
+   */
   constructor(public cols : number, public rows : number, fill : number) {
     var worker = new Worker('work.js');
     worker.onmessage = (e : MessageEvent) => {
@@ -41,27 +65,38 @@ class ModelInWorker {
       msg.changes.forEach((c) => {
         this.changes.push(c);
       });
+      // if the message is a response to InitLife, notify listeners immediately.
       if (msg.fromInit) {
         this.didChange.raise(this.changes.shift());
       }
     };
+
+    // request the the model be initialized
     worker.postMessage({
       type: InitLife,
       cols: cols,
       rows: rows,
       random: fill,
     });
+
+    // go ahead and request the first batch of generations
     worker.postMessage({
       type: NeedSome,
       n : 20,
     });
+
     this.worker = worker;
   }
 
+  /**
+   * Request changes associated with the next generation.
+   */
   next() {
     var changes = this.changes,
         worker = this.worker;
+    // dispatch the next set of changes
     this.didChange.raise(changes.shift());
+    // if we are running low on changes, request more
     if (changes.length <= 2) {
       worker.postMessage({
         type: NeedSome,
@@ -71,13 +106,23 @@ class ModelInWorker {
   }
 }
 
+/**
+ * A WebGL based that represents the cells of the game as cubes.
+ */
 class View {
+  // Three.js/WebGL state objects
   private camera : THREE.CombinedCamera;
   private renderer : THREE.WebGLRenderer;
   private scene : THREE.Scene;
 
+  // A cube mesh associated with each cell on the board
   private cubes : THREE.Mesh[] = [];
 
+  /**
+   * Constructs the scene and attaches the WebGL canvas to the root element.
+   * @param root the element to which the canvas should be attached.
+   * @param model the model to which this view is to bind.
+   */
   constructor(private root : HTMLElement, private model : ModelInWorker) {
     var rect = root.getBoundingClientRect(),
         scene = new THREE.Scene();
@@ -105,6 +150,10 @@ class View {
     });
   }
 
+  /**
+   * Requests that this view re-measure its parent and adjust its size and viewport
+   * accordingly.
+   */
   resize() {
     var rect = this.root.getBoundingClientRect(),
         scene = this.scene;
@@ -114,30 +163,43 @@ class View {
     this.render();
   }
 
+  /**
+   * Render the scene.
+   */
   render() {
     this.renderer.render(this.scene, this.camera);
   }
 
+  /**
+   * Invoked with the model reports a change.
+   * @param changes the Changes object that represents the new generation
+   */
   private modelDidChange(changes : Changes) {
-      var cubes = this.cubes;
+      var cubes = this.cubes,
+          born = changes.born,
+          died = changes.died;
 
-      changes.born.forEach((i : number) => {
+      // Move all cells being born below the floor so they can animate up
+      born.forEach((i : number) => {
         var cube = cubes[i];
         cube.visible = true;
         cube.position.y = -12;
       });
       this.render();
 
+      // Begin a transition to move births up and deaths down
       transition((p : number) => {
-        changes.born.forEach((i : number) => {
+        born.forEach((i : number) => {
           cubes[i].position.y = p * 24 - 12;
         });
-        changes.died.forEach((i : number) => {
+        died.forEach((i : number) => {
           var cube = cubes[i];
           cube.position.y = (1 - p) * 24 - 12;
           cube.visible = p < 1;
         });
 
+        // When the transition completes, wait a short time and then
+        // request the next change
         if (p >= 1) {
           setTimeout(() => {
             model.next();
@@ -148,6 +210,12 @@ class View {
       }, 200 /* ms */, sigmoidEasing);
   }
 
+  /**
+   * Initialize the camera.
+   * @param scene the current scene
+   * @param width the viewport width
+   * @param height the viewport height
+   */
   private initCamera(scene : THREE.Scene, width : number, height : number) {
     // TODO: adjust camera position by aspect ratio
     var camera = new THREE.CombinedCamera(width, height, 40, 1, 10000, -2000, 10000);
@@ -159,6 +227,10 @@ class View {
     this.camera = camera;
   }
 
+  /**
+   * Initialize ambient and directional lighting in the scene.
+   * @param scene the current scene
+   */
   private initLights(scene : THREE.Scene) {
     var ambient = new THREE.AmbientLight(0xff9900);
     scene.add(ambient);
@@ -175,6 +247,12 @@ class View {
     scene.add(directional);
   }
 
+  /**
+   * Initialize all 3D objects in the scene. This includes all cubes and the floor plane.
+   * @param scene the current scene
+   * @param model the model to which this is bound
+   * @param didLoad a callback to indicate when associated textures load
+   */
   private initAction(scene : THREE.Scene, model : ModelInWorker, didLoad : () => void) {
     var cubes = this.cubes,
         width = 3000,
@@ -183,8 +261,10 @@ class View {
         dy = depth / model.rows,
         cx = width / 2,
         cy = depth / 2;
+
+    // Create an plane for the floor
     var plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, depth, dx, dy),
+      new THREE.PlaneGeometry(width, depth, 1, 1),
       new THREE.MeshBasicMaterial({
         color: 0xeeeeee
       }));
@@ -193,6 +273,7 @@ class View {
     plane.material.side = THREE.DoubleSide;
     scene.add(plane);
 
+    // Create reusable geometry and materials for each of the cubes
     var geom = new THREE.CubeGeometry(dx, 20, dy),
         text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad),
         matr = new THREE.MeshLambertMaterial({
@@ -203,6 +284,8 @@ class View {
         transparent: true
       });
 
+    // Create each of the cubes in non-visible state, they will be adjusted as they
+    // are "born".
     for (var j = 0, m = model.rows; j < m; j++) {
       for (var i = 0, n = model.cols; i < n; i++) {
         var cube = new THREE.Mesh(geom, matr);
@@ -218,9 +301,11 @@ class View {
   }  
 }
 
-var model = new ModelInWorker(150, 150, 0.2),
+// Create a new model and view, which will begin our journey.
+var model = new ModelInWorker(150, 150, 0.1),
     view = new View(<HTMLElement>document.querySelector('#view'), model);
 
+// Listen for resize events and pass those events to the View.
 window.addEventListener('resize', (e : Event) => {
   view.resize();
 }, false);
