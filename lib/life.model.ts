@@ -26,7 +26,7 @@ export class Model {
   cols : number;
 
   // An event notification object for model changes.
-  didChange : Signal = new Signal;
+  didChange = new Signal;
 
   /**
    * Constructs a new board of size, cols * row. Each cell is initialized
@@ -172,7 +172,7 @@ export class Model {
    *
    * Implementation note: This uses an update strategy where only live cells and their
    * neighbors are updated. Dead cells with no living neighbors obviously won't be
-   * springing back to life until "Zombie Game of UnLife" variant emerges.
+   * springing back to life until the "Zombie Game of UnLife" variant emerges.
    */
   next() : Changes {
     var grid = this.grid,

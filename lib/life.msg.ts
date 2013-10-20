@@ -39,7 +39,6 @@ export interface NeedSomeMsg extends Msg {
  * A response containing the Changes associated with some new generations.
  */
 export interface HereSomeMsg extends Msg {
-  fromInit : boolean;
   changes : Changes[];
 }
 

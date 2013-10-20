@@ -17,7 +17,7 @@ var initLife = (msg : InitLifeMsg) => {
 
   // Compute the first change set and notify the client
   var changes = model.init(msg.values);
-  send({ type: HereSome, changes: [changes], fromInit: true});
+  send({ type: HereSome, changes: [changes]});
 };
 
 /**
@@ -30,7 +30,7 @@ var needSome = (msg : NeedSomeMsg) => {
   for (var i = 0; i < msg.n; i++) {
     changes.push(model.next());
   }
-  send({ type: HereSome, changes: changes, fromInit: false});
+  send({ type: HereSome, changes: changes});
 };
 
 /**

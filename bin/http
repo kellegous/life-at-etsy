@@ -9,7 +9,7 @@ import sys
 
 class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
   """ A simple handler that overrides address_string to prevent it from doing fqdn lookups
-      just for printing log messages """
+      just for printing log messages. """
   def address_string(self):
     host, port = self.client_address[:2]
     return host
@@ -17,13 +17,13 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 class Server(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
   """ A BaseHTTPServer configured to reduce latency when serving up local files since
       the BaseHTTPServer often encounters cases where non-finished requests block
-      concurrent requests for multiple seconds """
+      concurrent requests for multiple seconds. """
   def finish_request(self, request, client_address):
       request.settimeout(30)
       BaseHTTPServer.HTTPServer.finish_request(self, request, client_address)
 
 def http(addr):
-  """ Run an http server to serv files from the cwd. """
+  """ Run an http server to serve files from the cwd. """
   try:
     s = Server(addr, Handler)
     s.serve_forever();

@@ -1,7 +1,11 @@
 module life {
 
+/**
+ * Returns values for game state that will display the Etsy logo.
+ */
 export var etsyState = () => {
   var vals = Array(150 * 150),
+      // Don't fret, this is all generated code.
       ones = [8129, 8130, 8131, 8132, 8133, 8134, 8135, 8136, 8137, 8138, 8139, 8140, 8141, 8142,
               8143, 8144, 8145, 8146, 8147, 8148, 8149, 8150, 8151, 8152, 8153, 8154, 8279, 8280,
               8281, 8282, 8283, 8284, 8285, 8286, 8287, 8288, 8289, 8290, 8291, 8292, 8293, 8294,
