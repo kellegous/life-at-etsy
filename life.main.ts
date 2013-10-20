@@ -200,19 +200,66 @@ class View {
     this.renderer.render(this.scene, this.camera);
   }
 
+  private geometryFor(indices : number[]) : THREE.Geometry {
+    var cubes = this.cubes,
+        geom = new THREE.Geometry();
+    for (var i = 0, n = indices.length; i < n; i++) {
+      THREE.GeometryUtils.merge(geom, cubes[indices[i]]);
+    }
+    return geom;
+  }
+
+  aliveMesh : THREE.Mesh;
   /**
    * Invoked with the model reports a change.
    * @param changes the Changes object that represents the new generation
    */
   private modelDidChange(changes : Changes) {
       var cubes = this.cubes,
+          scene = this.scene,
           born = changes.born,
           died = changes.died,
+          survived = changes.survived,
           // y position of cube in live position
           offset = View.CUBE_HEIGHT/2 + View.CUBE_ELEVATION,
           // range of movement of a transitioning cube
           range = 2 * offset;
 
+      if (this.aliveMesh) {
+        scene.remove(this.aliveMesh);
+      }
+
+      var material = <THREE.MeshLambertMaterial>cubes[0].material;
+      var bornMesh = new THREE.Mesh(this.geometryFor(born), material),
+          survMesh = new THREE.Mesh(this.geometryFor(survived), material),
+          diedMesh = new THREE.Mesh(this.geometryFor(died), material);
+
+      bornMesh.position.y = -24;
+
+      scene.add(bornMesh);
+      scene.add(survMesh);
+      scene.add(diedMesh);
+      this.render();
+
+      transition((p : number) => {
+        bornMesh.position.y = (1 - p) * -24;
+        diedMesh.position.y = p * -24;
+        if (p >= 1) {
+          scene.remove(bornMesh);
+          scene.remove(diedMesh);
+          scene.remove(survMesh);
+          var aliveMesh = new THREE.Mesh(this.geometryFor(survived.concat(born)), material);
+          scene.add(aliveMesh);
+          this.aliveMesh = aliveMesh;
+
+          setTimeout(() => {
+            this.model.next();
+          }, 0);
+        }
+        this.render();
+      }, 200 /* ms */, sigmoidEasing);
+
+      return;
       // Move all cells being born below the floor so they can animate up
       for (var i = 0, n = born.length; i < n; i++) {
         var cube = cubes[born[i]];
@@ -237,7 +284,7 @@ class View {
         if (p >= 1) {
           setTimeout(() => {
             model.next();
-          }, 100);
+          }, 0);
         }
 
         this.render();
@@ -331,10 +378,10 @@ class View {
         cube.position.x = -cx + i * dx;
         cube.position.y = y;
         cube.position.z = -cy + j * dy;
-        cube.visible = false;
+        // cube.visible = false;
         cube.castShadow = true;
         cubes.push(cube);
-        scene.add(cube);
+        // scene.add(cube);
       }
     }
   }  

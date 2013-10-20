@@ -12,6 +12,11 @@ export interface Changes {
   born : number[];
 
   /**
+   * The indicies of all cells that survived in this generation.
+   */
+  survived : number[];
+
+  /**
    * The indicies of all cells that died in this generation.
    */
   died : number[];

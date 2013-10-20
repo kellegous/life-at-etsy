@@ -76,7 +76,7 @@ export class Model {
       }
     });
 
-    var changes = {born : alive, died: []};
+    var changes = {born : alive, died: [], survived: []};
     this.didChange.raise(this, changes);
     return changes;
   }
@@ -183,7 +183,8 @@ export class Model {
         // cells that were born in the next gen
         born = [],
         // cells that died in the next gen
-        died = [];
+        died = [],
+        survived = [];
 
     // compute the next value for all cells in active regions
     for (var i = 0, n = active.length; i < n; i++) {
@@ -201,6 +202,8 @@ export class Model {
         } else {
           died.push(index);
         }
+      } else if (next > 0) {
+        survived.push(index);
       }
     }
 
@@ -213,7 +216,7 @@ export class Model {
     }
     this.alive = alive;
 
-    var changes = {born: born, died: died};
+    var changes = {born: born, died: died, survived: survived};
     this.didChange.raise(this, changes);
     return changes;
   }
