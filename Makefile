@@ -6,18 +6,20 @@ test:
 pack: life.tar.gz
 
 life.tar.gz: all
+	ln -s . life
 	tar -zcvf life.tar.gz \
-		bin \
-		tests \
-		lib \
-		*.main.ts \
-		*.main.scss \
-		*.js \
-		*.css \
-		img/rand0.svg \
-		img/rand1.svg \
-		img/cube.png \
-		img/cube.psd
+		life/bin \
+		life/tests \
+		life/lib \
+		life/*.main.ts \
+		life/*.main.scss \
+		life/*.js \
+		life/*.css \
+		life/img/rand0.svg \
+		life/img/rand1.svg \
+		life/img/cube.png \
+		life/img/cube.psd
+	rm life
 
 run:
 	./bin/http
