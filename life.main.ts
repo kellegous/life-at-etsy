@@ -1,9 +1,25 @@
 // The primary entry point for the life app.
 
 /// <reference path="lib/life.msg.ts" />
+/// <reference path="lib/life.etsy.ts" />
 /// <reference path="lib/signal.ts" />
 /// <reference path="lib/three.d.ts" />
 module life {
+
+/**
+ * Produces a random configuration for the game board.
+ */
+var randomize = (size : number, fill : number) => {
+  var data = Array(size),
+      count = (size * fill) | 0;
+  for (var i = 0; i < size; i++) {
+    data[i] = 0;
+  }
+  for (var i = 0; i < count; i++) {
+    data[(Math.random() * size) | 0] = 1;
+  }
+  return data;
+};
 
 /**
  * An "ease-in-out" easing function.
@@ -50,8 +66,11 @@ class ModelInWorker {
   // the background worker maintaining the Model
   private worker : Worker;
 
-  // changes that have been received from the work, but not used.
+  // changes that have been received from the worker, but not used.
   private changes : Changes[] = [];
+
+  // The last change dispatched. This is used to support randomize.
+  private lastChange : Changes = {born : [], survived: [], died: []};
 
   // in the case where the client exhausts the number of buffered changes, this 
   // counter indicates how many change notifications to dispatch when new data
@@ -64,7 +83,7 @@ class ModelInWorker {
    * @param rows the number of rows in the game.
    * @param fill the ratio of live/total to use when randomly populating the board.
    */
-  constructor(public cols : number, public rows : number, fill : number) {
+  constructor(public cols : number, public rows : number, values : any[]) {
     var worker = new Worker('work.js');
     worker.onmessage = (e : MessageEvent) => {
       var msg = <HereSomeMsg>e.data,
@@ -84,12 +103,24 @@ class ModelInWorker {
       }
     };
 
+    this.worker = worker;
+    this.init(values);
+  }
+
+  /**
+   * Request that the worker initialize itself with the given state.
+   * @param values the values of the game state
+   */
+  private init(values : any[]) {
+    var worker = this.worker,
+        cols = this.cols,
+        rows = this.rows;
     // request the the model be initialized
     worker.postMessage({
       type: InitLife,
       cols: cols,
       rows: rows,
-      random: fill,
+      values: values,
     });
 
     // go ahead and request the first batch of generations
@@ -97,8 +128,20 @@ class ModelInWorker {
       type: NeedSome,
       n : 20,
     });
+  }
 
-    this.worker = worker;
+  /**
+   * Randomizes the game state.
+   */
+  randomize() {
+    var values = randomize(this.rows * this.cols, 0.1),
+        lastChange = this.lastChange,
+        died = lastChange.born.concat(lastChange.survived);
+    // Synthesize a "next" change that will wipe out the current board. Notice that this
+    // also discards any future generations we've already computed.
+    this.changes = [{born: [], survived: [], died: died}];
+    // Re-init the model
+    this.init(values);
   }
 
   /**
@@ -117,7 +160,8 @@ class ModelInWorker {
     }
 
     // dispatch the next set of changes
-    this.didChange.raise(changes.shift());
+    this.lastChange = changes.shift();
+    this.didChange.raise(this.lastChange);
     // if we are running low on changes, request more
     if (changes.length <= 2) {
       worker.postMessage({
@@ -163,6 +207,10 @@ class View {
   private survMesh : THREE.Mesh;
   private bornMesh : THREE.Mesh;
   private diedMesh : THREE.Mesh;
+
+  // This is a non-general way of just showing the first frame "etsy" a little longer than
+  // the rest.
+  private frameCount = 0;
 
   /**
    * Constructs the scene and attaches the WebGL canvas to the root element.
@@ -303,11 +351,19 @@ class View {
 
       this.render();
 
+      // Show each frame for 100ms ... except the first one, give it a bit more
+      // screen time.
+      var frame = this.frameCount++,
+          timeout = 100 /* ms */;
+      if (frame == 1) {
+        timeout = 1000 /* ms */;
+      }
+
       // Schedule the transition to the next generation to begin in ever how much 
       // time remains.
       setTimeout(() => {
         this.transition();
-      }, Math.max(0, 100 - Date.now() + startedAt));
+      }, Math.max(0, timeout - Date.now() + startedAt));
   }
 
   /**
@@ -421,12 +477,16 @@ var main = () => {
 
   // Create a new model and view, which will begin our journey.
   var size = 150,
-      model = new ModelInWorker(size, size, 0.1),
+      model = new ModelInWorker(size, size, etsyState()),
       view = new View(<HTMLElement>document.querySelector('#view'), model);
 
   // Listen for resize events and pass those events to the View.
   window.addEventListener('resize', (e : Event) => {
     view.resize();
+  }, false);
+
+  document.querySelector('#rand').addEventListener('click', (e : Event) => {
+    model.randomize();
   }, false);
 };
 

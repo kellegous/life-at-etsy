@@ -25,11 +25,7 @@ export interface InitLifeMsg extends Msg {
   rows : number;
 
   // Initialize the model to these values
-  values? : any[];
-
-  // Randomly generate the values for the model make "random" percent
-  // of the cells living.
-  random? : number;
+  values : any[];
 }
 
 /**

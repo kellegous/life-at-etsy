@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+	 id="svg2" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" inkscape:output_extension="org.inkscape.output.svg.inkscape" sodipodi:docname="grid-view-small.svg" inkscape:version="0.48.3.1 r9886" sodipodi:version="0.32"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="512px" height="512px"
+	 viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve">
+<g id="layer1" transform="translate(-374.21785,-62.236374)" inkscape:label="Layer 1" inkscape:groupmode="layer">
+	<path id="path8361" inkscape:connector-curvature="0" fill="#FF9900" d="M738.357,244.306h147.861v147.861H738.357V244.306z
+		 M556.287,244.306h147.862v147.861H556.287V244.306z M738.357,62.236h147.861v147.862H738.357V62.236z M374.218,62.236H522.08
+		v147.862H374.218V62.236z M556.287,426.374h147.862v147.862H556.287V426.374z M374.218,426.374H522.08v147.862H374.218V426.374z"/>
+</g>
+<rect y="182.069" fill="#CCCCCC" width="147.862" height="147.861"/>
+<rect x="182.069" fill="#CCCCCC" width="147.862" height="147.862"/>
+<rect x="364.138" y="364.138" fill="#CCCCCC" width="147.862" height="147.862"/>
+</svg>

@@ -7,22 +7,6 @@ module life {
 var model : Model;
 
 /**
- * Produces a random configuration for the game board.
- */
-var randomize = (size : number, fill : number) => {
-  var data = Array(size),
-      count = (size * fill) | 0;
-  for (var i = 0; i < size; i++) {
-    data[i] = 0;
-  }
-  for (var i = 0; i < count; i++) {
-    data[(Math.random() * size) | 0] = 1;
-  }
-  return data;
-};
-
-
-/**
  * Handle an InitLife request that instantiates a Model and initializes
  * the board state.
  * @param msg the InitLife message sent from the client
@@ -31,19 +15,9 @@ var initLife = (msg : InitLifeMsg) => {
   // Create the new model
   model = new Model(msg.cols, msg.rows);
 
-  // Determine the values to initialize the board state
-  var values = msg.values;
-  if (msg.random) {
-    values = randomize(model.size(), msg.random);
-  }
-
-  if (!values) {
-    return;
-  }
-
   // Compute the first change set and notify the client
-  var changes = model.init(values);
-  send({ type: HereSome, changes: [model.init(values)], fromInit: true});
+  var changes = model.init(msg.values);
+  send({ type: HereSome, changes: [changes], fromInit: true});
 };
 
 /**
