@@ -282,7 +282,9 @@ class View {
       cube.position.y = y;
       THREE.GeometryUtils.merge(geom, cube);
     }
-    return new THREE.Mesh(geom, <THREE.MeshLambertMaterial>cube.material);
+    var mesh = new THREE.Mesh(geom, <THREE.MeshLambertMaterial>cube.material);
+    mesh.castShadow = true;
+    return mesh;
   }
 
   /**
