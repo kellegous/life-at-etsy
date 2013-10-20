@@ -3,7 +3,6 @@
 /// <reference path="lib/life.msg.ts" />
 /// <reference path="lib/signal.ts" />
 /// <reference path="lib/three.d.ts" />
-/// <reference path="lib/raf.ts" />
 module life {
 
 /**

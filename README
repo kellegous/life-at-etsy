@@ -1,10 +1,133 @@
 Conway's Life
 
-- how to use it
 
-- implementation approach
+QUICK START
+The directory contains both the source and output for a web version of Conway's Game of Life. To
+view the app, you will need to host it on an HTTP server. It's ok, though, I've included a little
+one to make it easy to use. It's just a two step process:
 
-- technologies used
+Run the python based web server from the command line:
+./bin/http
 
-- files
+Then visit, http://localhost:8081/
 
+
+
+
+SOME NOTES ON IMPLEMENTATION
+There are two separable components to this app. There is the "Model" which is responsible
+for playing and tracking the board state of the Game of Life. Then there is the view, which
+is responsible for presenting the state of the Model to the user.
+
+The Model
+The Model uses a strategy for creating the next generation that avoids checking all cells in
+the game. This is done by simply keeping track of the indices of each cell that is alive; the
+next generation is computed by only considering those active cells and their 8 neighbors. This
+works since "dead" cells with no living neighbors have no chance of coming to life in the next
+generation. The Model notifies its listeners of changes to the game state. These changes are
+described as lists of cells that were born, list of cells that died and a list of cells that
+survived. The Model is testable outside of the web app and a very simple test harness is
+included (bin/test). In the app, the Model is hosted in a separate web worker. Computing
+successive generations of the game is not expensive relative to rendering the cells, so the
+worker is only to avoid doing this work in the rendering loop.
+
+The View
+The View is a WebGL based presentation of the game. While I generally tried to avoid using
+external libraries, the time and frustration to write WebGL by hand is a little much so I
+have used Three.js for the WebGL rendering. The View listens for model changes and animates
+the born and dying cells on each generation. Having each individual cube be an independent
+object is a bit problematic as it requires a GL call per cube. Also, each of the cubes is
+not truly indepedent. The "born" cubes animate together as a group as do the "dying" cubes.
+To ensure we get good frame rates during transitions, the View uses the idle time between
+generations to merge each set of cubes in a single mesh. This means that during transition
+there are only three objects (four if you count the floor plane) requiring a GL draw call.
+
+
+
+
+REVIEWING THE CODE
+The source for the project is primarily written in TypeScript (http://typescript.codeplex.com/)
+which is a structurally-typed superset of JavaScript. If you are familiar with JavaScript, the
+code should not look foreign. I have included a couple of notes below for reviewers who have
+never seen TypeScript that explains a couple of common patterns. The lone CSS file for the app
+is written in Sass (http://sass-lang.com/) which I think is quite commonly used these days. My
+apologies for using compiled languages, but I have a rapid prototyping setup that I built a
+few years ago that continues to serve me well.
+
+TypeScript Tips
+You will notice that many of the .ts files include an odd line of the form:
+/// <reference path="file.ts" />
+You can think of these directives as very much like #include in C files. The reference directive
+simply adds the contents of the referenced file into the file with the directive.
+
+TypeScript has a very convenient function syntax known as "fat arrow" functions. In addition to
+being more concise than JavaScript's standard syntax, "fat arrow" functions ensure that this
+references the enclosing instance rather than the actual "this" for the active environment. For example:
+
+method() {
+  this.array.forEach((item) => {
+    this.otherMethod(item);
+  });
+}
+
+compiles to the following JavaScript:
+
+method: function() {
+  var self = this;
+  this.array.forEach(function(item) {
+    self.otherMethod(item);
+  });
+}
+
+And finally, interfaces in TypeScript are compile time only constructs. They are simply a way
+of describing the structure of a JavaScript object to get some assistance from the type checker.
+If you look at the compiled output, you will not be able to find any code relating to those
+types. Similarly, you will often see casts in the code:
+
+new View(<HTMLElement>document.querySelector('#view'));
+
+Again, this is done simply in the name of type-checking.
+
+
+
+
+WHAT YOU'LL FIND IN HERE
+bin/
+  tests            A test harness for testing the logic in the Model
+  http             A simple http server to make it easy to view the app
+lib/
+  life.model.ts    Code for the Model
+  life.common.ts   Types that are needed to communicate with the model
+  life.msg.ts      Message interfaces for communicating with the WebWorker
+  signal.ts        A simple mechanism for collecting event listeners and dispatching to them
+  three.min.js     A copy of the Three.js library
+  three.d.js       TypeScript declarations for Three.js
+tests/
+  *.txt            Each file contains an expected sequence that is used by bin/test
+img/
+  cube.png         The texture used for each cube
+  cube.psd         The original photoshop file
+index.html         The main html page
+life.js            The compiled output for the app's main entry point
+work.js            The compiled output for the web workers entry point
+life.css           The compiled css for the app
+life.main.ts       The source for the app's main entry point
+work.main.ts       The source for the web worker's entry point
+life.main.scss     The source for the app's css file
+Makefile           A Makefile for compiling everything
+
+
+
+
+BUILD DEPENDENCIES
+Should you need to actually build this thing from source or run the tests, you will need the
+following:
+
+Node.js (http://nodejs.org/)
+(either use your package manager or download it directly)
+
+TypeScript
+npm instal -g typescript
+
+Sass
+gem install sass
