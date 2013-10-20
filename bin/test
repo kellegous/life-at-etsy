@@ -124,50 +124,49 @@ var Runner = {
   // Determine the expected changes for two Model states.
   _expectedChanges: function(next, prev) {
     var born = [],
-        died = [];
+        died = [],
+        survived = [];
 
     for (var i = 0, n = next.length; i < n; i++) {
       if (next[i] == prev[i]) {
-        continue;
-      }
-      if (next[i] == 1) {
-        born.push(i);
+        if (next[i] == 1) {
+          survived.push(i);
+        }
       } else {
-        died.push(i);
+        if (next[i] == 1) {
+          born.push(i);
+        } else {
+          died.push(i);
+        }        
       }
     }
 
-    return { born: born, died: died };
+    return { born: born, died: died, survived: survived };
   },
 
   // Validate a set of changes against what is expected.
   _hasExpectedChanges: function(changes, expected) {
-    var rb = changes.born,
-        rd = changes.died,
-        eb = expected.born,
-        ed = expected.died;
-    if (rb.length != eb.length || rd.length != ed.length) {
-      return false;
-    }
-
-    rb.sort(function(a, b) {
-      return a - b;
-    });
-    rd.sort(function(a, b) {
-      return a - b;
-    });
-
-    for (var i = 0, n = rb.length; i < n; i++) {
-      if (rb[i] != eb[i]) {
+    var same = function(actual, expected) {
+      if (actual.length != expected.length) {
         return false;
       }
-    }
-    for (var i = 0, n = rd.length; i < n; i++) {
-      if (rd[i] != ed[i]) {
-        return false;
+
+      actual.sort(function(a, b) {
+        return a - b;
+      });
+
+      for (var i = 0, n = actual.length; i < n; i++) {
+        if (actual[i] != expected[i]) {
+          return false;
+        }
       }
-    }
-    return true;
+
+      return true;
+    };
+
+    return same(changes.born, expected.born)
+        && same(changes.died, expected.died)
+        && same(changes.survived, expected.survived);
   },
 
   // Validate the model state against the expected results.

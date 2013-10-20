@@ -131,6 +131,14 @@ class ModelInWorker {
 
 /**
  * A WebGL based that represents the cells of the game as cubes.
+ *
+ * Implementation Note: Rather than sending each of the cubes to the GPU as an
+ * indepdent object, this View uses the idle time between updates to combine
+ * cubes that will be moving together into a single mesh. Building the meshes
+ * is expensive but this allows us to have high frame rates on transitions as
+ * the number of independent buffers sent to the GPU will be only the three
+ * sets of cubes that move together (cubes that survived, cubes that were born,
+ * and cubes that died) instead of a buffer for each cube.
  */
 class View {
   // the size of the cube in the y-direction
@@ -144,8 +152,18 @@ class View {
   private renderer : THREE.WebGLRenderer;
   private scene : THREE.Scene;
 
-  // A cube mesh associated with each cell on the board
-  private cubes : THREE.Mesh[] = [];
+  // A template cube mesh that will be used as a flyweight for creating geometries
+  private cube : THREE.Mesh;
+  // The coordinates of each cube along the x and z axes.
+  private locs : THREE.Vector2[];
+
+  // Meshes for each of the independent groups of cubes. survMesh composes all cubes
+  // that survived from the previous generation. bornMesh are all cubes that are being
+  // born in this generation. Finally, diedMesh are the cubes that are dying in this
+  // generation.
+  private survMesh : THREE.Mesh;
+  private bornMesh : THREE.Mesh;
+  private diedMesh : THREE.Mesh;
 
   /**
    * Constructs the scene and attaches the WebGL canvas to the root element.
@@ -200,95 +218,97 @@ class View {
     this.renderer.render(this.scene, this.camera);
   }
 
-  private geometryFor(indices : number[]) : THREE.Geometry {
-    var cubes = this.cubes,
+  /**
+   * Construct a mesh composed of all the cubes at the specified indices.
+   * @parma indices the indices of the cubes to merge
+   * @return a THREE.Mesh of all the cubes with an associated material
+   */
+  private meshFor(indices : number[]) : THREE.Mesh {
+    var locs = this.locs,
+        cube = this.cube,
+        y = View.CUBE_HEIGHT / 2 + View.CUBE_ELEVATION,
         geom = new THREE.Geometry();
     for (var i = 0, n = indices.length; i < n; i++) {
-      THREE.GeometryUtils.merge(geom, cubes[indices[i]]);
+      var loc = locs[indices[i]];
+      cube.position.x = loc.x;
+      cube.position.z = loc.y;
+      cube.position.y = y;
+      THREE.GeometryUtils.merge(geom, cube);
     }
-    return geom;
+    return new THREE.Mesh(geom, <THREE.MeshLambertMaterial>cube.material);
   }
 
-  aliveMesh : THREE.Mesh;
+  /**
+   * Animate from the current generation to the next (using the meshes that were built
+   * during idle time).
+   */
+  private transition() {
+    var bornMesh = this.bornMesh,
+        diedMesh = this.diedMesh,
+        range = View.CUBE_HEIGHT + View.CUBE_ELEVATION * 2;
+    transition((p : number) => {
+      bornMesh.position.y = (1 - p) * -range;
+      diedMesh.position.y = p * -range;
+      if (p >= 1) {
+        // Schedule the next update 
+        setTimeout(() => {
+          this.model.next();
+        }, 0);
+      }
+      this.render();
+    }, 200 /* ms */, sigmoidEasing);
+  }
+
   /**
    * Invoked with the model reports a change.
    * @param changes the Changes object that represents the new generation
    */
   private modelDidChange(changes : Changes) {
-      var cubes = this.cubes,
-          scene = this.scene,
+      var scene = this.scene,
           born = changes.born,
           died = changes.died,
           survived = changes.survived,
-          // y position of cube in live position
-          offset = View.CUBE_HEIGHT/2 + View.CUBE_ELEVATION,
+          bornMesh = this.bornMesh,
+          survMesh = this.survMesh,
+          diedMesh = this.diedMesh,
           // range of movement of a transitioning cube
-          range = 2 * offset;
+          range = View.CUBE_HEIGHT + View.CUBE_ELEVATION * 2,
+          startedAt = Date.now();
 
-      if (this.aliveMesh) {
-        scene.remove(this.aliveMesh);
+      // Remove the meshes for the last generation
+      if (survMesh) {
+        scene.remove(survMesh);
+      }
+      if (bornMesh) {
+        scene.remove(bornMesh);
+      }
+      if (diedMesh) {
+        scene.remove(diedMesh);
       }
 
-      var material = <THREE.MeshLambertMaterial>cubes[0].material;
-      var bornMesh = new THREE.Mesh(this.geometryFor(born), material),
-          survMesh = new THREE.Mesh(this.geometryFor(survived), material),
-          diedMesh = new THREE.Mesh(this.geometryFor(died), material);
+      // Build new meshes for all three sets of cells
+      survMesh = this.meshFor(survived);
+      bornMesh = this.meshFor(born);
+      diedMesh = this.meshFor(died);
 
-      bornMesh.position.y = -24;
+      // The cells being born need to start below stage.
+      bornMesh.position.y = -range;
 
-      scene.add(bornMesh);
       scene.add(survMesh);
+      scene.add(bornMesh);
       scene.add(diedMesh);
+
+      this.survMesh = survMesh;
+      this.bornMesh = bornMesh;
+      this.diedMesh = diedMesh;
+
       this.render();
 
-      transition((p : number) => {
-        bornMesh.position.y = (1 - p) * -24;
-        diedMesh.position.y = p * -24;
-        if (p >= 1) {
-          scene.remove(bornMesh);
-          scene.remove(diedMesh);
-          scene.remove(survMesh);
-          var aliveMesh = new THREE.Mesh(this.geometryFor(survived.concat(born)), material);
-          scene.add(aliveMesh);
-          this.aliveMesh = aliveMesh;
-
-          setTimeout(() => {
-            this.model.next();
-          }, 0);
-        }
-        this.render();
-      }, 200 /* ms */, sigmoidEasing);
-
-      return;
-      // Move all cells being born below the floor so they can animate up
-      for (var i = 0, n = born.length; i < n; i++) {
-        var cube = cubes[born[i]];
-        cube.visible = true;
-        cube.position.y = -offset;
-      }
-      this.render();
-
-      // Begin a transition to move births up and deaths down
-      transition((p : number) => {
-        for (var i = 0, n = born.length; i < n; i++) {
-          cubes[born[i]].position.y = p * range - offset;
-        }
-        for (var i = 0, n = died.length; i < n; i++) {
-          var cube = cubes[died[i]];
-          cube.position.y = (1 - p) * range - offset;
-          cube.visible = p < 1;
-        }
-
-        // When the transition completes, wait a short time and then
-        // request the next change
-        if (p >= 1) {
-          setTimeout(() => {
-            model.next();
-          }, 0);
-        }
-
-        this.render();
-      }, 200 /* ms */, sigmoidEasing);
+      // Schedule the transition to the next generation to begin in ever how much 
+      // time remains.
+      setTimeout(() => {
+        this.transition();
+      }, Math.max(0, 100 - Date.now() + startedAt));
   }
 
   /**
@@ -339,7 +359,7 @@ class View {
    * @param didLoad a callback to indicate when associated textures load
    */
   private initAction(scene : THREE.Scene, model : ModelInWorker, didLoad : () => void) {
-    var cubes = this.cubes,
+    var locs = [],
         width = 3000,
         depth = 3000,
         dx = width / model.cols,
@@ -352,38 +372,37 @@ class View {
     var plane = new THREE.Mesh(
       new THREE.PlaneGeometry(width, depth, 1, 1),
       new THREE.MeshBasicMaterial({
-        color: 0xeeeeee
+        color: 0xeeeeee,
       }));
     plane.rotation.x = Math.PI / 2;
     plane.receiveShadow = true;
     plane.material.side = THREE.DoubleSide;
     scene.add(plane);
 
-    // Create reusable geometry and materials for each of the cubes
-    var geom = new THREE.CubeGeometry(dx, View.CUBE_HEIGHT, dy),
-        text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad),
-        matr = new THREE.MeshLambertMaterial({
-        shading: THREE.FlatShading,
-        map: text,
-        color: 0xff9900,
-        ambient: 0xff9900,
-        transparent: true
-      });
+    // Build the flyweight cube that will be used in constructing meshes.
+    var text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad),
+        cube = new THREE.Mesh(
+          new THREE.CubeGeometry(dx, View.CUBE_HEIGHT, dy),
+          new THREE.MeshLambertMaterial({
+            shading: THREE.FlatShading,
+            map: text,
+            color: 0xff9900,
+            ambient: 0xff9900,
+            transparent: true
+          }));
+
+    cube.castShadow = true;
 
     // Create each of the cubes in non-visible state, they will be adjusted as they
     // are "born".
     for (var j = 0, m = model.rows; j < m; j++) {
       for (var i = 0, n = model.cols; i < n; i++) {
-        var cube = new THREE.Mesh(geom, matr);
-        cube.position.x = -cx + i * dx;
-        cube.position.y = y;
-        cube.position.z = -cy + j * dy;
-        // cube.visible = false;
-        cube.castShadow = true;
-        cubes.push(cube);
-        // scene.add(cube);
+        locs.push(new THREE.Vector2(-cx + i * dx, -cy + j * dy));
       }
     }
+
+    this.cube = cube;
+    this.locs = locs;
   }  
 }
 
