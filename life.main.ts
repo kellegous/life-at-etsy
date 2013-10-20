@@ -406,14 +406,31 @@ class View {
   }  
 }
 
-// Create a new model and view, which will begin our journey.
-var size = 150,
-    model = new ModelInWorker(size, size, 0.1),
-    view = new View(<HTMLElement>document.querySelector('#view'), model);
+/**
+ * Where it all begins.
+ */
+var main = () => {
+  // Workers cannot load scripts when the host page is a file: url.
+  if (location.href.indexOf('file:') == 0) {
+    var warn = document.getElementById('warn');
+    warn.style.display = 'block';
+    setTimeout(() => {
+      warn.style.opacity = "1.0";
+    }, 0);
+    return;
+  }
 
-// Listen for resize events and pass those events to the View.
-window.addEventListener('resize', (e : Event) => {
-  view.resize();
-}, false);
+  // Create a new model and view, which will begin our journey.
+  var size = 150,
+      model = new ModelInWorker(size, size, 0.1),
+      view = new View(<HTMLElement>document.querySelector('#view'), model);
+
+  // Listen for resize events and pass those events to the View.
+  window.addEventListener('resize', (e : Event) => {
+    view.resize();
+  }, false);
+};
+
+main();
 
 }

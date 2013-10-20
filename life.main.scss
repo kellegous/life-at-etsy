@@ -1,5 +1,8 @@
 body {
   overflow: hidden;
+  font-family: HelveticaNeue,Helvetica,Arial,sans-serif;
+  font-size: 16px;
+  color: #333;
 }
 
 // The element containing the canvas. It needs to consume the entire viewport.
@@ -9,4 +12,34 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+#warn {
+  display: none;
+  opacity: 0;
+  margin: 50px auto;
+  width: 600px;
+  border: 1px solid #eee;
+  padding: 20px;
+  background-color: #f6f6f6;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+
+  -webkit-transition: opacity 200ms ease-in-out;
+  -moz-transition: opacity 200ms ease-in-out;
+  -o-transition: opacity 200ms ease-in-out;
+  -ms-transition: opacity 200ms ease-in-out;
+  transition: opacity 200ms ease-in-out;
+
+  >.title {
+    font-size: 24px;
+    font-weight: bold;
+  }
+  >.text {
+    line-height: 1.5;
+    margin-top: 10px;
+    >code {
+      color: #060;
+      background-color: #eee;
+    }
+  }
 }
