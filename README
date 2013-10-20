@@ -4,19 +4,19 @@ Conway's Life
 QUICK START
 The directory contains both the source and output for a web version of Conway's Game of Life. To
 view the app, you will need to host it on an HTTP server. It's ok, though, I've included a little
-one to make it easy to use. It's just a two step process:
+one to make it easy to get going. It's just a two step process:
 
-Run the python based web server from the command line:
+(1) Run the python based web server from the command line:
 ./bin/http
 
-Then visit, http://localhost:8081/
+(2) Then visit, http://localhost:8081/
 
 
 
 
 SOME NOTES ON IMPLEMENTATION
 There are two separable components to this app. There is the "Model" which is responsible
-for playing and tracking the board state of the Game of Life. Then there is the view, which
+for playing and tracking the board state of the Game of Life. Then there is the View, which
 is responsible for presenting the state of the Model to the user.
 
 The Model
@@ -55,14 +55,15 @@ apologies for using compiled languages, but I have a rapid prototyping setup tha
 few years ago that continues to serve me well.
 
 TypeScript Tips
-You will notice that many of the .ts files include an odd line of the form:
+You will notice that many of the .ts files include odd lines of the form:
 /// <reference path="file.ts" />
 You can think of these directives as very much like #include in C files. The reference directive
 simply adds the contents of the referenced file into the file with the directive.
 
 TypeScript has a very convenient function syntax known as "fat arrow" functions. In addition to
-being more concise than JavaScript's standard syntax, "fat arrow" functions ensure that this
-references the enclosing instance rather than the actual "this" for the active environment. For example:
+being more concise than JavaScript's standard syntax, "fat arrow" functions ensure that "this"
+references the enclosing instance rather than the actual "this" for the current activation
+record. For example:
 
 method() {
   this.array.forEach((item) => {
@@ -107,6 +108,8 @@ tests/
 img/
   cube.png         The texture used for each cube
   cube.psd         The original photoshop file
+  rand0.svg        A background image for the randomize button
+  rand1.svg        Another background image for the randomized button
 index.html         The main html page
 life.js            The compiled output for the app's main entry point
 work.js            The compiled output for the web workers entry point
@@ -126,8 +129,8 @@ following:
 Node.js (http://nodejs.org/)
 (either use your package manager or download it directly)
 
-TypeScript
+TypeScript (node.js based)
 npm instal -g typescript
 
-Sass
+Sass (ruby based)
 gem install sass
