@@ -133,6 +133,12 @@ class ModelInWorker {
  * A WebGL based that represents the cells of the game as cubes.
  */
 class View {
+  // the size of the cube in the y-direction
+  static CUBE_HEIGHT = 20;
+
+  // the distance above the surface that live cubes hover
+  static CUBE_ELEVATION = 2;
+
   // Three.js/WebGL state objects
   private camera : THREE.CombinedCamera;
   private renderer : THREE.WebGLRenderer;
@@ -201,26 +207,30 @@ class View {
   private modelDidChange(changes : Changes) {
       var cubes = this.cubes,
           born = changes.born,
-          died = changes.died;
+          died = changes.died,
+          // y position of cube in live position
+          offset = View.CUBE_HEIGHT/2 + View.CUBE_ELEVATION,
+          // range of movement of a transitioning cube
+          range = 2 * offset;
 
       // Move all cells being born below the floor so they can animate up
-      born.forEach((i : number) => {
-        var cube = cubes[i];
+      for (var i = 0, n = born.length; i < n; i++) {
+        var cube = cubes[born[i]];
         cube.visible = true;
-        cube.position.y = -12;
-      });
+        cube.position.y = -offset;
+      }
       this.render();
 
       // Begin a transition to move births up and deaths down
       transition((p : number) => {
-        born.forEach((i : number) => {
-          cubes[i].position.y = p * 24 - 12;
-        });
-        died.forEach((i : number) => {
-          var cube = cubes[i];
-          cube.position.y = (1 - p) * 24 - 12;
+        for (var i = 0, n = born.length; i < n; i++) {
+          cubes[born[i]].position.y = p * range - offset;
+        }
+        for (var i = 0, n = died.length; i < n; i++) {
+          var cube = cubes[died[i]];
+          cube.position.y = (1 - p) * range - offset;
           cube.visible = p < 1;
-        });
+        }
 
         // When the transition completes, wait a short time and then
         // request the next change
@@ -241,11 +251,12 @@ class View {
    * @param height the viewport height
    */
   private initCamera(scene : THREE.Scene, width : number, height : number) {
-    // TODO: adjust camera position by aspect ratio
     var camera = new THREE.CombinedCamera(width, height, 40, 1, 10000, -2000, 10000);
+    // camera is perched up above the scene looking down at the origin in a way that will
+    // fill the screen for common aspect ratios.
     camera.position.x = 50;
     camera.position.y = 700;
-    camera.position.z = 1200 * Math.cos(Math.PI / 4);
+    camera.position.z = 850;
     camera.lookAt(new THREE.Vector3(0, 0, 0));
     scene.add(camera);
     this.camera = camera;
@@ -256,9 +267,12 @@ class View {
    * @param scene the current scene
    */
   private initLights(scene : THREE.Scene) {
+    // Use ambient light that accentuates the material color of the cubes
     var ambient = new THREE.AmbientLight(0xff9900);
     scene.add(ambient);
 
+    // Directional light is positioned such that soft shadows are cast in the direction
+    // of the camera.
     var directional = new THREE.DirectionalLight(0xff9900, 1);
     directional.position.set(100, 500, 0);
     directional.lookAt(new THREE.Vector3(0, 0, 0));
@@ -284,7 +298,8 @@ class View {
         dx = width / model.cols,
         dy = depth / model.rows,
         cx = width / 2,
-        cy = depth / 2;
+        cy = depth / 2,
+        y = View.CUBE_HEIGHT/2 + View.CUBE_ELEVATION;
 
     // Create an plane for the floor
     var plane = new THREE.Mesh(
@@ -298,7 +313,7 @@ class View {
     scene.add(plane);
 
     // Create reusable geometry and materials for each of the cubes
-    var geom = new THREE.CubeGeometry(dx, 20, dy),
+    var geom = new THREE.CubeGeometry(dx, View.CUBE_HEIGHT, dy),
         text = THREE.ImageUtils.loadTexture('img/cube.png', null, didLoad),
         matr = new THREE.MeshLambertMaterial({
         shading: THREE.FlatShading,
@@ -314,7 +329,7 @@ class View {
       for (var i = 0, n = model.cols; i < n; i++) {
         var cube = new THREE.Mesh(geom, matr);
         cube.position.x = -cx + i * dx;
-        cube.position.y = 12;
+        cube.position.y = y;
         cube.position.z = -cy + j * dy;
         cube.visible = false;
         cube.castShadow = true;
@@ -326,7 +341,8 @@ class View {
 }
 
 // Create a new model and view, which will begin our journey.
-var model = new ModelInWorker(150, 150, 0.1),
+var size = 150,
+    model = new ModelInWorker(size, size, 0.1),
     view = new View(<HTMLElement>document.querySelector('#view'), model);
 
 // Listen for resize events and pass those events to the View.
