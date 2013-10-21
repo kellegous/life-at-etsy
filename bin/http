@@ -32,8 +32,8 @@ def http(addr):
 
 def main():
   parser = optparse.OptionParser()
-  parser.add_option('--port', dest='port', default=8081, help='')
-  parser.add_option('--addr', dest='addr', default='localhost', help='')
+  parser.add_option('--port', dest='port', default=8081, type='int', help='Port to bind')
+  parser.add_option('--addr', dest='addr', default='localhost', help='Address to bind')
   opts, args = parser.parse_args()
 
   # change diretory into the root
