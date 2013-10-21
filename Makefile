@@ -15,6 +15,7 @@ life.tar.gz: all
 		life/*.main.scss \
 		life/*.js \
 		life/*.css \
+		life/index.html \
 		life/img/rand0.svg \
 		life/img/rand1.svg \
 		life/img/cube.png \
