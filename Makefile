@@ -8,6 +8,7 @@ pack: life.tar.gz
 life.tar.gz: all
 	ln -s . life
 	tar -zcvf life.tar.gz \
+		README \
 		life/bin \
 		life/tests \
 		life/lib \
