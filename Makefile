@@ -28,7 +28,7 @@ run:
 	./bin/http
 
 %.js : %.main.ts lib/*.ts
-	tsc --out $@ --removeComments $<
+	./node_modules/typescript/bin/tsc --out $@ --removeComments $<
 
 %.css : %.main.scss
 	sass --no-cache --style=compressed $< $@

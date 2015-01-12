@@ -1,0 +1,9 @@
+{
+  "name": "left",
+  "version": "0.0.1",
+  "description": "The Game of Life",
+  "author": "Kelly Norton <kellegous@gmail.com>",
+  "dependencies" : {
+    "typescript" : "0.9.1"
+  }
+}
