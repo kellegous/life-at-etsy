@@ -27,7 +27,10 @@ life.tar.gz: all
 run:
 	./bin/http
 
-%.js : %.main.ts lib/*.ts
+node_modules/typescript/bin/tsc:
+	npm install
+
+%.js : %.main.ts lib/*.ts node_modules/typescript/bin/tsc
 	./node_modules/typescript/bin/tsc --out $@ --removeComments $<
 
 %.css : %.main.scss
