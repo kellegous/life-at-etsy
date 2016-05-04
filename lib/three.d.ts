@@ -5485,25 +5485,6 @@ declare module THREE {
             shape: Vector2[];
             holes: Vector2[][];
         };
-
-        static Utils: {
-            removeHoles(contour: Vector2[], holes: Vector2[][]): {
-                shape: Shape;
-                isolatedPts: Vector2[];
-                allpoints: Vector2[];
-            };
-            triangulateShape(contour: Vector2[], holes: Vector2[][]): Vector2[];
-            isClockWise(pts: Vector2[]): boolean;
-            b2p0(t: number, p: number): number;
-            b2p1(t: number, p: number): number;
-            b2p2(t: number, p: number): number;
-            b2(t: number, p0: number, p1: number, p2: number): number;
-            b3p0(t: number, p: number): number;
-            b3p1(t: number, p: number): number;
-            b3p2(t: number, p: number): number;
-            b3p3(t: number, p: number): number;
-            b3(t: number, p0: number, p1: number, p2: number, p3: number): number;
-        };
     }
 
 

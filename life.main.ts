@@ -445,7 +445,7 @@ class View {
             map: text,
             color: 0xff9900,
             ambient: 0xff9900,
-            transparent: true
+            // transparent: true
           }));
 
     cube.castShadow = true;

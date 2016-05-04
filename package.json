@@ -4,6 +4,6 @@
   "description": "The Game of Life",
   "author": "Kelly Norton <kellegous@gmail.com>",
   "dependencies" : {
-    "typescript" : "0.9.1"
+    "typescript" : "1.7.5"
   }
 }
