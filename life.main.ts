@@ -444,8 +444,7 @@ class View {
             shading: THREE.FlatShading,
             map: text,
             color: 0xff9900,
-            ambient: 0xff9900,
-            // transparent: true
+            ambient: 0xff9900
           }));
 
     cube.castShadow = true;
